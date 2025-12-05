@@ -1,0 +1,366 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.config-screen {
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    max-width: 500px;
+    margin: 100px auto;
+}
+
+.config-screen h1 {
+    color: #667eea;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.input-group {
+    margin-bottom: 25px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 600;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.simulation-screen {
+    display: none;
+}
+
+.header {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.header h2 {
+    color: #667eea;
+}
+
+.reset-btn {
+    padding: 10px 20px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.building-container {
+    background: linear-gradient(180deg, #b0bec5 0%, #90a4ae 100%);
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    overflow-x: auto;
+    border: 3px solid #78909c;
+}
+
+.floor {
+    display: flex;
+    align-items: center;
+    min-height: 120px;
+    border-bottom: 3px solid #455a64;
+    position: relative;
+    gap: 20px;
+    background: linear-gradient(180deg, #eceff1 0%, #cfd8dc 100%);
+}
+
+.floor:last-child {
+    border-bottom: 5px solid #263238;
+}
+
+.floor-number {
+    min-width: 60px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 18px;
+    color: #667eea;
+}
+
+.call-button {
+    min-width: 50px;
+    height: 50px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.call-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.call-button.active {
+    background: #FFC107;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.lifts-area {
+    display: flex;
+    gap: 30px;
+    flex: 1;
+    justify-content: flex-start;
+    padding-left: 20px;
+}
+
+.lift-shaft {
+    width: 100px;
+    position: relative;
+}
+
+.lift {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(180deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+    border-radius: 5px;
+    position: absolute;
+    bottom: 0;
+    transition: none;
+    box-shadow: 
+        0 10px 25px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.1),
+        inset 0 -1px 0 rgba(0,0,0,0.3);
+    overflow: hidden;
+    border: 2px solid #1a252f;
+}
+
+.lift::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+}
+
+.lift::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    bottom: 5px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.lift-doors {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+}
+
+.lift-door {
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(180deg, #546e7a 0%, #455a64 50%, #37474f 100%);
+    position: relative;
+    transition: transform 2.5s ease-in-out;
+    border: 1px solid #263238;
+}
+
+.lift-door::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 3px;
+    height: 40px;
+    background: linear-gradient(180deg, #90a4ae, #607d8b);
+    border-radius: 2px;
+    transform: translateY(-50%);
+}
+
+.lift-door.left::before {
+    right: 8px;
+}
+
+.lift-door.right::before {
+    left: 8px;
+}
+
+/* Door panel lines */
+.lift-door::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    bottom: 10px;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+.lift-door.left::after {
+    right: 15px;
+}
+
+.lift-door.right::after {
+    left: 15px;
+}
+
+.lift-door.left {
+    transform-origin: left;
+}
+
+.lift-door.right {
+    transform-origin: right;
+}
+
+.lift.doors-open .lift-door.left {
+    transform: translateX(-100%);
+}
+
+.lift.doors-open .lift-door.right {
+    transform: translateX(100%);
+}
+
+.lift-number {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+    z-index: 10;
+    background: rgba(0,0,0,0.6);
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.lift-status {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #4CAF50;
+    font-size: 9px;
+    z-index: 10;
+    background: rgba(0,0,0,0.8);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(76,175,80,0.3);
+}
+
+@media (max-width: 768px) {
+    .building-container {
+        padding: 15px;
+    }
+
+    .floor {
+        min-height: 100px;
+        gap: 10px;
+    }
+
+    .floor-number {
+        min-width: 40px;
+        font-size: 14px;
+    }
+
+    .call-button {
+        min-width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    .lifts-area {
+        gap: 15px;
+        padding-left: 10px;
+    }
+
+    .lift-shaft {
+        width: 70px;
+    }
+
+    .lift {
+        width: 70px;
+        height: 80px;
+    }
+
+    .lift-number {
+        font-size: 18px;
+    }
+}
+
+.error-message {
+    color: #f44336;
+    font-size: 14px;
+    margin-top: 5px;
+}
