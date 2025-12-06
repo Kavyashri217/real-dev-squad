@@ -8,31 +8,125 @@
     <script src="script.js" defer></script>
 </head>
 <body>
-    <div class="container">
-        <!-- Configuration Screen -->
-        <div id="configScreen" class="config-screen">
-            <h1>Lift Simulator</h1>
-            <div class="input-group">
-                <label for="numFloors">Number of Floors (1-20):</label>
-                <input type="number" id="numFloors" min="1" max="20" value="5">
-                <span class="error-message" id="floorsError"></span>
-            </div>
-            <div class="input-group">
-                <label for="numLifts">Number of Lifts (1-10):</label>
-                <input type="number" id="numLifts" min="1" max="10" value="3">
-                <span class="error-message" id="liftsError"></span>
-            </div>
-            <button class="btn" onclick="startSimulation()">Start Simulation</button>
-        </div>
+    <div class="app-shell">
+        <!-- Left gradient background blob -->
+        <div class="app-accent"></div>
 
-        <!-- Simulation Screen -->
-        <div id="simulationScreen" class="simulation-screen">
-            <div class="header">
-                <h2>Lift Control System</h2>
-                <button class="reset-btn" onclick="resetSimulation()">Reset</button>
-            </div>
-            <div id="building" class="building-container"></div>
-        </div>
+        <main class="app-main">
+
+            <!-- Config Screen -->
+            <section id="configScreen" class="card config-card">
+                <header class="card-header">
+                    <div class="title-group">
+                        <h1>Lift Simulator</h1>
+                        <p>Configure your building and watch the elevators work in real-time. </p>
+                    </div>
+                </header>
+
+                <div class="card-body">
+                    <div class="form-row">
+                        <label for="numFloors">Number of floors</label>
+                        <div class="input-inline">
+                            <input type="number" id="numFloors" min="1" max="20" value="5">
+                            <span class="input-suffix">1-20</span>
+                        </div>
+                        <span class="error-message" id="floorsError"></span>
+                    </div>
+
+                    <div class="form-row">
+                        <label for="numLifts">Number of lifts</label>
+                        <div class="input-inline">
+                           <input type="number" id="numLifts" min="1" max="10" value="3">
+                           <span class="input-suffix">1-10</span> 
+                        </div>
+                        <span class="error-message" id="liftsError"></span>
+                    </div>
+                </div>
+
+                <footer class="card-footer">
+                    <button id="startBtn" class="btn btn-primary">Start Simulation</button>
+                </footer>
+            </section>
+
+            <!-- Simulation Screen -->
+            <section id="simulationScreen" class="sim-screen">
+
+                <header class="sim-header card">
+                    <div class="sim-title-block">
+                        <h2>Lift Control System</h2>
+                        <p class="sim-subtitle">
+                            Click the ▲/▼ buttons on each floor to request a lift.
+                        </p>
+                    </div>
+
+                    <div class="sim-meta">
+                        <div class="meta-pill">
+                            <span class="meta-label">Floors</span>
+                            <span id="metaFloors" class="meta-value">–</span>
+                        </div>
+                        <div class="meta-pill">
+                            <span class="meta-label">Lifts</span>
+                            <span id="metaLifts" class="meta-value">–</span>
+                        </div>
+                        <button id="resetBtn" class="btn btn-ghost">Reset</button>
+                    </div>
+                </header>
+
+                <div class="sim-layout">
+                    <!-- Building Panel -->
+                    <section class="card building-card">
+                        <header class="building-header">
+                            <h3>Building View</h3>
+                            <span class="building-hint">Ground floor is 0</span>
+                        </header>
+                        <div id="building" class="building-container">
+                            <!-- Floors + Lifts injected by JS -->
+                        </div>
+                    </section>
+
+                    <!-- Info/status panel -->
+                    <aside class="card sidebar-card">
+                        <header class="sidebar-header">
+                            <h3>System Monitor</h3>
+                        </header>
+                        
+                        <div class="sidebar-section">
+                            <h4>Lift Status</h4>
+                            <div id="liftPanels" class="lift-panels">
+                                <!-- Per lift cards injected by JS -->
+                            </div>
+                        </div>
+
+                        <div class="sidebar-section">
+                            <h4>Pending Calls</h4>
+                            <ul id="callQueue" class="call-queue">
+                                <!-- Call list injected by JS -->
+                            </ul>
+                        </div>
+
+                        <div class="sidebar-section legend">
+                            <h4>Legend</h4>
+                            <div class="legend-row">
+                                <span class="legend-dot legend-idle"></span>
+                                <span>Idle</span>
+                            </div>
+                            <div class="legend-row">
+                                <span class="legend-dot legend-up"></span>
+                                <span>Moving Up</span>
+                            </div>
+                            <div class="legend-row">
+                                <span class="legend-dot legend-down"></span>
+                                <span>Moving Down</span>
+                            </div>
+                            <div class="legend-row">
+                                <span class="legend-dot legend-door"></span>
+                                <span>Doors opening / closing</span>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
     </div>
 </body>
 </html>
