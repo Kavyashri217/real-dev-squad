@@ -1,11 +1,13 @@
-// --- CENTRAL APP STATE ------------------------------------------------------
+// =========================
+//   GLOBAL APP STATE
+// =========================
 
 const AppState = {
     numFloors: 0,
     numLifts: 0,
-    lifts: [],        
+    lifts: [],
     activeCalls: new Map(),
-    floorHeight: 0    
+    floorHeight: 0
 };
 
 function createLift(id) {
@@ -15,19 +17,13 @@ function createLift(id) {
         queue: [],
         direction: "idle",
         processing: false,
-        dom: {
-            element: null,
-            statusChip: null,
-            panel: null,
-            panelDot: null,
-            panelFloor: null,
-            panelDirection: null,
-            panelQueue: null
-        }
+        dom: {}
     };
 }
 
-// --- LIFT LOGIC -------------------------------------------------------------
+// =========================
+//   LIFT CONTROLLER LOGIC
+// =========================
 
 const LiftController = {
     FLOOR_TRAVEL_TIME: 1500,
@@ -37,65 +33,48 @@ const LiftController = {
         const key = `${floor}-${direction}`;
         if (AppState.activeCalls.has(key)) return;
 
-        const call = { floor, direction, createdAt: Date.now() };
-        AppState.activeCalls.set(key, call);
-
+        AppState.activeCalls.set(key, { floor, direction, createdAt: Date.now() });
         UI.markCallButton(floor, direction, true);
         UI.updateCallQueueList();
 
-        const best = this.findBestLift(call);
-        if (best === null) return;
-
-        this.assignCall(AppState.lifts[best], call);
+        const best = this.findBestLift(floor, direction);
+        if (best !== null) this.assignLift(AppState.lifts[best], floor, direction);
     },
 
-    findBestLift(call) {
+    findBestLift(floor, direction) {
         let best = null;
         let bestScore = Infinity;
 
-        AppState.lifts.forEach((lift, index) => {
+        AppState.lifts.forEach((lift, i) => {
             const lastStop = lift.queue.length
                 ? lift.queue[lift.queue.length - 1]
                 : lift.currentFloor;
 
-            const distance = Math.abs(lastStop - call.floor);
-            const queuePenalty = lift.queue.length * 0.8;
+            const distance = Math.abs(lastStop - floor);
+            const queuePenalty = lift.queue.length * 0.6;
 
-            let directionBonus = 0;
-            if (lift.direction === call.direction && lift.direction !== "idle") {
-                if (
-                    (call.direction === "up" && call.floor >= lift.currentFloor) ||
-                    (call.direction === "down" && call.floor <= lift.currentFloor)
-                ) {
-                    directionBonus = -1.5;
-                }
-            }
-
-            const score = distance + queuePenalty + directionBonus;
+            const score = distance + queuePenalty;
 
             if (score < bestScore) {
                 bestScore = score;
-                best = index;
+                best = i;
             }
         });
 
         return best;
     },
 
-    assignCall(lift, call) {
-        if (!lift.queue.includes(call.floor)) {
-            lift.queue.push(call.floor);
-        }
+    assignLift(lift, floor) {
+        if (!lift.queue.includes(floor)) lift.queue.push(floor);
 
         lift.queue.sort((a, b) => a - b);
-        if (lift.direction === "down") lift.queue.sort((a, b) => b - a);
 
         UI.updateLiftPanel(lift);
 
-        if (!lift.processing) this.process(lift);
+        if (!lift.processing) this.processLift(lift);
     },
 
-    async process(lift) {
+    async processLift(lift) {
         lift.processing = true;
 
         while (lift.queue.length > 0) {
@@ -106,28 +85,23 @@ const LiftController = {
                 target < lift.currentFloor ? "down" : "idle";
 
             UI.updateLiftPanel(lift);
-
             await this.moveTo(lift, target);
-            await this.doors(lift);
+            await this.operateDoors(lift);
 
             this.clearCalls(target);
         }
 
         lift.direction = "idle";
         lift.processing = false;
-
         UI.setLiftStatus(lift, "Idle");
         UI.updateLiftPanel(lift);
     },
 
     async moveTo(lift, targetFloor) {
-        const dist = Math.abs(targetFloor - lift.currentFloor);
-        if (dist === 0) return;
+        const floors = Math.abs(targetFloor - lift.currentFloor);
+        const duration = floors * this.FLOOR_TRAVEL_TIME;
 
-        const duration = dist * this.FLOOR_TRAVEL_TIME;
-        const dirLabel = targetFloor > lift.currentFloor ? "up" : "down";
-
-        UI.setLiftStatus(lift, `Moving ${dirLabel}`);
+        UI.setLiftStatus(lift, lift.direction === "up" ? "Moving up" : "Moving down");
         UI.animateLift(lift.id, targetFloor, duration);
         UI.updateLiftPanel(lift);
 
@@ -137,45 +111,52 @@ const LiftController = {
         UI.updateLiftPanel(lift);
     },
 
-    async doors(lift) {
+    async operateDoors(lift) {
         UI.setLiftStatus(lift, "Doors opening");
         UI.setDoorState(lift.id, true);
-        UI.updateLiftPanel(lift);
-
         await this.wait(this.DOOR_TIME);
 
         UI.setLiftStatus(lift, "Doors closing");
         UI.setDoorState(lift.id, false);
-        UI.updateLiftPanel(lift);
-
         await this.wait(this.DOOR_TIME);
     },
 
     clearCalls(floor) {
-        const removes = [];
-        for (const [k, c] of AppState.activeCalls.entries()) {
-            if (c.floor === floor) {
-                removes.push(k);
-                UI.markCallButton(c.floor, c.direction, false);
+        const erase = [];
+
+        for (const [key, call] of AppState.activeCalls.entries()) {
+            if (call.floor === floor) {
+                erase.push(key);
+                UI.markCallButton(call.floor, call.direction, false);
             }
         }
-        removes.forEach((k) => AppState.activeCalls.delete(k));
+
+        erase.forEach((key) => AppState.activeCalls.delete(key));
         UI.updateCallQueueList();
     },
 
     wait(ms) {
-        return new Promise((res) => setTimeout(res, ms));
+        return new Promise(res => setTimeout(res, ms));
     }
 };
 
-// --- UI LAYER ---------------------------------------------------------------
+
+// =========================
+//   UI MANAGEMENT LAYER
+// =========================
 
 const UI = {
+
+    // -------------------------
+    // Create Floors + Shafts
+    // -------------------------
+
     initBuilding() {
         const building = document.getElementById("building");
         building.innerHTML = "";
         building.style.position = "relative";
 
+        // Build floors
         for (let floor = 0; floor < AppState.numFloors; floor++) {
             const floorEl = document.createElement("div");
             floorEl.className = "floor";
@@ -194,8 +175,8 @@ const UI = {
             if (floor < AppState.numFloors - 1) {
                 const up = document.createElement("button");
                 up.className = "call-button";
-                up.textContent = "▲";
                 up.id = `call-btn-${floor}-up`;
+                up.textContent = "▲";
                 up.onclick = () => LiftController.requestPickup(floor, "up");
                 actions.appendChild(up);
             }
@@ -203,8 +184,8 @@ const UI = {
             if (floor > 0) {
                 const down = document.createElement("button");
                 down.className = "call-button";
-                down.textContent = "▼";
                 down.id = `call-btn-${floor}-down`;
+                down.textContent = "▼";
                 down.onclick = () => LiftController.requestPickup(floor, "down");
                 actions.appendChild(down);
             }
@@ -220,21 +201,30 @@ const UI = {
             building.appendChild(floorEl);
         }
 
-        this.createFullHeightShaft();
         this.captureFloorHeight();
+        this.createLiftShaftAligned();
         this.positionLiftsAtGround();
     },
 
-    createFullHeightShaft() {
+    // -------------------------
+    // Properly Align Shaft
+    // -------------------------
+
+    createLiftShaftAligned() {
         const building = document.getElementById("building");
+        const firstArea = building.querySelector(".lifts-area");
+
+        const rect = firstArea.getBoundingClientRect();
+        const buildingRect = building.getBoundingClientRect();
 
         const shaft = document.createElement("div");
         shaft.className = "lift-shaft";
         shaft.style.position = "absolute";
         shaft.style.top = "0";
         shaft.style.bottom = "0";
-        shaft.style.left = "160px"; 
-        shaft.style.width = "80px";
+        shaft.style.left = (rect.left - buildingRect.left) + "px";
+        shaft.style.width = rect.width + "px";
+
         building.appendChild(shaft);
 
         AppState.lifts.forEach((lift) => {
@@ -253,15 +243,10 @@ const UI = {
 
             const doors = document.createElement("div");
             doors.className = "lift-doors";
-
-            const left = document.createElement("div");
-            left.className = "lift-door left";
-
-            const right = document.createElement("div");
-            right.className = "lift-door right";
-
-            doors.appendChild(left);
-            doors.appendChild(right);
+            doors.innerHTML = `
+                <div class="lift-door left"></div>
+                <div class="lift-door right"></div>
+            `;
 
             liftEl.appendChild(doors);
             liftEl.appendChild(badge);
@@ -274,12 +259,13 @@ const UI = {
         });
     },
 
+    // -------------------------
+    // Movement Helpers
+    // -------------------------
+
     captureFloorHeight() {
         const floor = document.querySelector(".floor");
-        if (!floor) return;
-
-        AppState.floorHeight = floor.offsetHeight;
-        console.log("Floor height:", AppState.floorHeight);
+        AppState.floorHeight = floor ? floor.offsetHeight : 80;
     },
 
     positionLiftsAtGround() {
@@ -289,16 +275,16 @@ const UI = {
 
             el.style.transition = "none";
             el.style.bottom = "0px";
-            void el.offsetHeight;
+            el.offsetHeight;
             el.style.transition = "";
         });
     },
 
-    animateLift(id, targetFloor, duration) {
+    animateLift(id, floor, duration) {
         const el = document.getElementById(`lift-${id}`);
         if (!el) return;
 
-        const y = targetFloor * AppState.floorHeight;
+        const y = floor * AppState.floorHeight;
 
         el.style.transition = `bottom ${duration}ms linear`;
         el.style.bottom = `${y}px`;
@@ -320,11 +306,12 @@ const UI = {
         const btn = document.getElementById(`call-btn-${floor}-${dir}`);
         if (!btn) return;
 
-        if (active) btn.classList.add("active");
-        else btn.classList.remove("active");
+        active ? btn.classList.add("active") : btn.classList.remove("active");
     },
 
-    // --- SIDE PANEL ---
+    // -------------------------
+    // Side Panel UI
+    // -------------------------
 
     initLiftPanels() {
         const container = document.getElementById("liftPanels");
@@ -334,48 +321,26 @@ const UI = {
             const panel = document.createElement("div");
             panel.className = "lift-panel";
 
-            const header = document.createElement("div");
-            header.className = "lift-panel-header";
-
-            const title = document.createElement("span");
-            title.className = "lift-panel-title";
-            title.textContent = `Lift ${lift.id + 1}`;
-
-            const dot = document.createElement("span");
-            dot.className = "lift-panel-dot idle";
-
-            header.appendChild(title);
-            header.appendChild(dot);
-
-            const body = document.createElement("div");
-            body.className = "lift-panel-body";
-
-            const fL = document.createElement("span");
-            fL.textContent = "Floor";
-
-            const fV = document.createElement("span");
-
-            const dL = document.createElement("span");
-            dL.textContent = "Direction";
-
-            const dV = document.createElement("span");
-
-            const qL = document.createElement("span");
-            qL.textContent = "Queue";
-
-            const qV = document.createElement("span");
-
-            body.append(fL, fV, dL, dV, qL, qV);
-            panel.append(header, body);
-            container.appendChild(panel);
+            panel.innerHTML = `
+                <div class="lift-panel-header">
+                    <span class="lift-panel-title">Lift ${lift.id + 1}</span>
+                    <span class="lift-panel-dot idle"></span>
+                </div>
+                <div class="lift-panel-body">
+                    <span>Floor</span><span class="p-floor">0</span>
+                    <span>Direction</span><span class="p-dir">Idle</span>
+                    <span>Queue</span><span class="p-queue">–</span>
+                </div>
+            `;
 
             lift.dom.panel = panel;
-            lift.dom.panelDot = dot;
-            lift.dom.panelFloor = fV;
-            lift.dom.panelDirection = dV;
-            lift.dom.panelQueue = qV;
+            lift.dom.panelDot = panel.querySelector(".lift-panel-dot");
+            lift.dom.panelFloor = panel.querySelector(".p-floor");
+            lift.dom.panelDirection = panel.querySelector(".p-dir");
+            lift.dom.panelQueue = panel.querySelector(".p-queue");
 
             this.updateLiftPanel(lift);
+            container.appendChild(panel);
         });
     },
 
@@ -387,19 +352,19 @@ const UI = {
             lift.direction === "idle"
                 ? "Idle"
                 : lift.direction === "up"
-                    ? "Up"
-                    : "Down";
+                ? "Up"
+                : "Down";
 
         lift.dom.panelQueue.textContent =
             lift.queue.length ? lift.queue.join(", ") : "–";
 
         lift.dom.panelDot.className = "lift-panel-dot";
         lift.dom.panelDot.classList.add(
-            lift.direction === "up"
+            lift.direction === "idle"
+                ? "idle"
+                : lift.direction === "up"
                 ? "up"
-                : lift.direction === "down"
-                    ? "down"
-                    : "idle"
+                : "down"
         );
     },
 
@@ -414,27 +379,23 @@ const UI = {
             return;
         }
 
-        const sorted = [...AppState.activeCalls.values()].sort(
-            (a, b) => a.createdAt - b.createdAt
-        );
-
-        for (const call of sorted) {
-            const li = document.createElement("li");
-
-            const name = document.createElement("span");
-            name.textContent = `Floor ${call.floor}`;
-
-            const tag = document.createElement("span");
-            tag.className = "call-tag";
-            tag.textContent = call.direction.toUpperCase();
-
-            li.append(name, tag);
-            list.appendChild(li);
-        }
+        [...AppState.activeCalls.values()]
+            .sort((a, b) => a.createdAt - b.createdAt)
+            .forEach((call) => {
+                const li = document.createElement("li");
+                li.innerHTML = `
+                    <span>Floor ${call.floor}</span>
+                    <span class="call-tag">${call.direction.toUpperCase()}</span>
+                `;
+                list.appendChild(li);
+            });
     }
 };
 
-// --- APP BOOTSTRAP ----------------------------------------------------------
+
+// =========================
+//   EVENT HANDLERS
+// =========================
 
 function startSimulation() {
     const floors = Number(document.getElementById("numFloors").value);
@@ -475,15 +436,15 @@ function startSimulation() {
 }
 
 function resetSimulation() {
-    document.getElementById("simulationScreen").style.display = "none";
     document.getElementById("configScreen").style.display = "block";
+    document.getElementById("simulationScreen").style.display = "none";
 
     document.getElementById("building").innerHTML = "";
     document.getElementById("liftPanels").innerHTML = "";
     document.getElementById("callQueue").innerHTML = "";
 
-    AppState.activeCalls.clear();
     AppState.lifts = [];
+    AppState.activeCalls.clear();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
