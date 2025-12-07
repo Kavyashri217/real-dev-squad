@@ -15,9 +15,17 @@ function createLift(id) {
         id,
         currentFloor: 0,
         queue: [],
-        direction: "idle",
+        direction: "idle",   // "up" | "down" | "idle"
         processing: false,
-        dom: {}
+        dom: {
+            element: null,
+            statusChip: null,
+            panel: null,
+            panelDot: null,
+            panelFloor: null,
+            panelDirection: null,
+            panelQueue: null
+        }
     };
 }
 
@@ -26,23 +34,32 @@ function createLift(id) {
 // =========================
 
 const LiftController = {
-    FLOOR_TRAVEL_TIME: 1500,
-    DOOR_TIME: 1800,
+    FLOOR_TRAVEL_TIME: 1500, // ms per floor
+    DOOR_TIME: 1800,         // ms door open / close
 
     requestPickup(floor, direction) {
         const key = `${floor}-${direction}`;
         if (AppState.activeCalls.has(key)) return;
 
-        AppState.activeCalls.set(key, { floor, direction, createdAt: Date.now() });
+        AppState.activeCalls.set(key, {
+            floor,
+            direction,
+            createdAt: Date.now()
+        });
+
         UI.markCallButton(floor, direction, true);
         UI.updateCallQueueList();
 
-        const best = this.findBestLift(floor, direction);
-        if (best !== null) this.assignLift(AppState.lifts[best], floor, direction);
+        const index = this.findBestLift(floor);
+        if (index === null) return;
+
+        this.assignLift(AppState.lifts[index], floor);
     },
 
-    findBestLift(floor, direction) {
-        let best = null;
+    findBestLift(targetFloor) {
+        if (!AppState.lifts.length) return null;
+
+        let bestIndex = null;
         let bestScore = Infinity;
 
         AppState.lifts.forEach((lift, i) => {
@@ -50,45 +67,50 @@ const LiftController = {
                 ? lift.queue[lift.queue.length - 1]
                 : lift.currentFloor;
 
-            const distance = Math.abs(lastStop - floor);
+            const distance = Math.abs(lastStop - targetFloor);
             const queuePenalty = lift.queue.length * 0.6;
-
             const score = distance + queuePenalty;
 
             if (score < bestScore) {
                 bestScore = score;
-                best = i;
+                bestIndex = i;
             }
         });
 
-        return best;
+        return bestIndex;
     },
 
     assignLift(lift, floor) {
-        if (!lift.queue.includes(floor)) lift.queue.push(floor);
-
+        if (!lift.queue.includes(floor)) {
+            lift.queue.push(floor);
+        }
         lift.queue.sort((a, b) => a - b);
 
         UI.updateLiftPanel(lift);
 
-        if (!lift.processing) this.processLift(lift);
+        if (!lift.processing) {
+            this.processLift(lift);
+        }
     },
 
     async processLift(lift) {
         lift.processing = true;
 
         while (lift.queue.length > 0) {
-            const target = lift.queue.shift();
+            const targetFloor = lift.queue.shift();
 
-            lift.direction =
-                target > lift.currentFloor ? "up" :
-                target < lift.currentFloor ? "down" : "idle";
+            if (targetFloor > lift.currentFloor) {
+                lift.direction = "up";
+            } else if (targetFloor < lift.currentFloor) {
+                lift.direction = "down";
+            } else {
+                lift.direction = "idle";
+            }
 
             UI.updateLiftPanel(lift);
-            await this.moveTo(lift, target);
+            await this.moveToFloor(lift, targetFloor);
             await this.operateDoors(lift);
-
-            this.clearCalls(target);
+            this.clearServedCalls(targetFloor);
         }
 
         lift.direction = "idle";
@@ -97,11 +119,14 @@ const LiftController = {
         UI.updateLiftPanel(lift);
     },
 
-    async moveTo(lift, targetFloor) {
-        const floors = Math.abs(targetFloor - lift.currentFloor);
-        const duration = floors * this.FLOOR_TRAVEL_TIME;
+    async moveToFloor(lift, targetFloor) {
+        const floorsToTravel = Math.abs(targetFloor - lift.currentFloor);
+        if (floorsToTravel === 0) return;
 
-        UI.setLiftStatus(lift, lift.direction === "up" ? "Moving up" : "Moving down");
+        const duration = floorsToTravel * this.FLOOR_TRAVEL_TIME;
+        const label = targetFloor > lift.currentFloor ? "up" : "down";
+
+        UI.setLiftStatus(lift, `Moving ${label}`);
         UI.animateLift(lift.id, targetFloor, duration);
         UI.updateLiftPanel(lift);
 
@@ -114,24 +139,24 @@ const LiftController = {
     async operateDoors(lift) {
         UI.setLiftStatus(lift, "Doors opening");
         UI.setDoorState(lift.id, true);
+        UI.updateLiftPanel(lift);
         await this.wait(this.DOOR_TIME);
 
         UI.setLiftStatus(lift, "Doors closing");
         UI.setDoorState(lift.id, false);
+        UI.updateLiftPanel(lift);
         await this.wait(this.DOOR_TIME);
     },
 
-    clearCalls(floor) {
-        const erase = [];
-
+    clearServedCalls(floor) {
+        const toDelete = [];
         for (const [key, call] of AppState.activeCalls.entries()) {
             if (call.floor === floor) {
-                erase.push(key);
+                toDelete.push(key);
                 UI.markCallButton(call.floor, call.direction, false);
             }
         }
-
-        erase.forEach((key) => AppState.activeCalls.delete(key));
+        toDelete.forEach(k => AppState.activeCalls.delete(k));
         UI.updateCallQueueList();
     },
 
@@ -140,23 +165,19 @@ const LiftController = {
     }
 };
 
-
 // =========================
-//   UI MANAGEMENT LAYER
+//   UI LAYER
 // =========================
 
 const UI = {
-
-    // -------------------------
-    // Create Floors + Shafts
-    // -------------------------
+    // ------- BUILDING & FLOORS -------
 
     initBuilding() {
         const building = document.getElementById("building");
         building.innerHTML = "";
         building.style.position = "relative";
 
-        // Build floors
+        // Floors 0..n-1; CSS uses column-reverse so 0 is bottom visually
         for (let floor = 0; floor < AppState.numFloors; floor++) {
             const floorEl = document.createElement("div");
             floorEl.className = "floor";
@@ -173,21 +194,25 @@ const UI = {
             actions.className = "floor-actions";
 
             if (floor < AppState.numFloors - 1) {
-                const up = document.createElement("button");
-                up.className = "call-button";
-                up.id = `call-btn-${floor}-up`;
-                up.textContent = "▲";
-                up.onclick = () => LiftController.requestPickup(floor, "up");
-                actions.appendChild(up);
+                const upBtn = document.createElement("button");
+                upBtn.className = "call-button";
+                upBtn.id = `call-btn-${floor}-up`;
+                upBtn.textContent = "▲";
+                upBtn.addEventListener("click", () =>
+                    LiftController.requestPickup(floor, "up")
+                );
+                actions.appendChild(upBtn);
             }
 
             if (floor > 0) {
-                const down = document.createElement("button");
-                down.className = "call-button";
-                down.id = `call-btn-${floor}-down`;
-                down.textContent = "▼";
-                down.onclick = () => LiftController.requestPickup(floor, "down");
-                actions.appendChild(down);
+                const downBtn = document.createElement("button");
+                downBtn.className = "call-button";
+                downBtn.id = `call-btn-${floor}-down`;
+                downBtn.textContent = "▼";
+                downBtn.addEventListener("click", () =>
+                    LiftController.requestPickup(floor, "down")
+                );
+                actions.appendChild(downBtn);
             }
 
             left.appendChild(label);
@@ -202,32 +227,31 @@ const UI = {
         }
 
         this.captureFloorHeight();
-        this.createLiftShaftAligned();
+        this.initLiftLayer();
         this.positionLiftsAtGround();
     },
 
-    // -------------------------
-    // Properly Align Shaft
-    // -------------------------
+    // ------- SINGLE VERTICAL SHAFT, CENTERED -------
 
-    createLiftShaftAligned() {
+    initLiftLayer() {
         const building = document.getElementById("building");
-        const firstArea = building.querySelector(".lifts-area");
+        // Remove old layer if any
+        const existing = document.getElementById("lift-layer");
+        if (existing) existing.remove();
 
-        const rect = firstArea.getBoundingClientRect();
-        const buildingRect = building.getBoundingClientRect();
+        const layer = document.createElement("div");
+        layer.id = "lift-layer";
+        layer.style.position = "absolute";
+        layer.style.top = "0";
+        layer.style.bottom = "0";
+        layer.style.left = "50%";
+        layer.style.transform = "translateX(-50%)";
+        layer.style.width = "80px"; // column width
+        layer.style.pointerEvents = "none"; // clicks pass through
 
-        const shaft = document.createElement("div");
-        shaft.className = "lift-shaft";
-        shaft.style.position = "absolute";
-        shaft.style.top = "0";
-        shaft.style.bottom = "0";
-        shaft.style.left = (rect.left - buildingRect.left) + "px";
-        shaft.style.width = rect.width + "px";
+        building.appendChild(layer);
 
-        building.appendChild(shaft);
-
-        AppState.lifts.forEach((lift) => {
+        AppState.lifts.forEach(lift => {
             const liftEl = document.createElement("div");
             liftEl.className = "lift";
             liftEl.id = `lift-${lift.id}`;
@@ -243,81 +267,91 @@ const UI = {
 
             const doors = document.createElement("div");
             doors.className = "lift-doors";
-            doors.innerHTML = `
-                <div class="lift-door left"></div>
-                <div class="lift-door right"></div>
-            `;
+
+            const leftDoor = document.createElement("div");
+            leftDoor.className = "lift-door left";
+            const rightDoor = document.createElement("div");
+            rightDoor.className = "lift-door right";
+
+            doors.appendChild(leftDoor);
+            doors.appendChild(rightDoor);
 
             liftEl.appendChild(doors);
             liftEl.appendChild(badge);
             liftEl.appendChild(status);
 
+            // allow vertical movement
+            liftEl.style.position = "absolute";
+            liftEl.style.left = "50%";
+            liftEl.style.transform = "translateX(-50%)";
+            liftEl.style.bottom = "0";
+
             lift.dom.element = liftEl;
             lift.dom.statusChip = status;
 
-            shaft.appendChild(liftEl);
+            layer.appendChild(liftEl);
         });
     },
 
-    // -------------------------
-    // Movement Helpers
-    // -------------------------
-
     captureFloorHeight() {
-        const floor = document.querySelector(".floor");
-        AppState.floorHeight = floor ? floor.offsetHeight : 80;
+        const building = document.getElementById("building");
+        const buildingHeight = building.clientHeight;
+
+        if (AppState.numFloors > 0) {
+            AppState.floorHeight = buildingHeight / AppState.numFloors;
+        } else {
+            AppState.floorHeight = 80;
+        }
     },
 
     positionLiftsAtGround() {
-        AppState.lifts.forEach((lift) => {
+        AppState.lifts.forEach(lift => {
             const el = lift.dom.element;
             if (!el) return;
-
             el.style.transition = "none";
             el.style.bottom = "0px";
-            el.offsetHeight;
+            // force reflow then re-enable transitions
+            void el.offsetHeight;
             el.style.transition = "";
         });
     },
 
-    animateLift(id, floor, duration) {
-        const el = document.getElementById(`lift-${id}`);
+    animateLift(liftId, targetFloor, duration) {
+        const el = document.getElementById(`lift-${liftId}`);
         if (!el) return;
 
-        const y = floor * AppState.floorHeight;
-
+        const bottom = targetFloor * AppState.floorHeight;
         el.style.transition = `bottom ${duration}ms linear`;
-        el.style.bottom = `${y}px`;
+        el.style.bottom = `${bottom}px`;
     },
 
-    setDoorState(id, open) {
-        const el = document.getElementById(`lift-${id}`);
+    setDoorState(liftId, open) {
+        const el = document.getElementById(`lift-${liftId}`);
         if (!el) return;
-
         if (open) el.classList.add("doors-open");
         else el.classList.remove("doors-open");
     },
 
     setLiftStatus(lift, text) {
-        if (lift.dom.statusChip) lift.dom.statusChip.textContent = text;
+        if (lift.dom.statusChip) {
+            lift.dom.statusChip.textContent = text;
+        }
     },
 
-    markCallButton(floor, dir, active) {
-        const btn = document.getElementById(`call-btn-${floor}-${dir}`);
+    markCallButton(floor, direction, active) {
+        const btn = document.getElementById(`call-btn-${floor}-${direction}`);
         if (!btn) return;
-
-        active ? btn.classList.add("active") : btn.classList.remove("active");
+        if (active) btn.classList.add("active");
+        else btn.classList.remove("active");
     },
 
-    // -------------------------
-    // Side Panel UI
-    // -------------------------
+    // ------- SIDE PANEL (LIFT STATUS) -------
 
     initLiftPanels() {
         const container = document.getElementById("liftPanels");
         container.innerHTML = "";
 
-        AppState.lifts.forEach((lift) => {
+        AppState.lifts.forEach(lift => {
             const panel = document.createElement("div");
             panel.className = "lift-panel";
 
@@ -348,25 +382,24 @@ const UI = {
         if (!lift.dom.panel) return;
 
         lift.dom.panelFloor.textContent = lift.currentFloor;
-        lift.dom.panelDirection.textContent =
-            lift.direction === "idle"
-                ? "Idle"
-                : lift.direction === "up"
-                ? "Up"
-                : "Down";
+
+        const dirText =
+            lift.direction === "up" ? "Up" :
+            lift.direction === "down" ? "Down" : "Idle";
+        lift.dom.panelDirection.textContent = dirText;
 
         lift.dom.panelQueue.textContent =
             lift.queue.length ? lift.queue.join(", ") : "–";
 
-        lift.dom.panelDot.className = "lift-panel-dot";
-        lift.dom.panelDot.classList.add(
-            lift.direction === "idle"
-                ? "idle"
-                : lift.direction === "up"
-                ? "up"
-                : "down"
-        );
+        // dot colour
+        const dot = lift.dom.panelDot;
+        dot.className = "lift-panel-dot";
+        if (lift.direction === "up") dot.classList.add("up");
+        else if (lift.direction === "down") dot.classList.add("down");
+        else dot.classList.add("idle");
     },
+
+    // ------- CALL QUEUE LIST -------
 
     updateCallQueueList() {
         const list = document.getElementById("callQueue");
@@ -379,41 +412,51 @@ const UI = {
             return;
         }
 
-        [...AppState.activeCalls.values()]
-            .sort((a, b) => a.createdAt - b.createdAt)
-            .forEach((call) => {
-                const li = document.createElement("li");
-                li.innerHTML = `
-                    <span>Floor ${call.floor}</span>
-                    <span class="call-tag">${call.direction.toUpperCase()}</span>
-                `;
-                list.appendChild(li);
-            });
+        const calls = Array.from(AppState.activeCalls.values()).sort(
+            (a, b) => a.createdAt - b.createdAt
+        );
+
+        calls.forEach(call => {
+            const li = document.createElement("li");
+            const label = document.createElement("span");
+            label.textContent = `Floor ${call.floor}`;
+
+            const tag = document.createElement("span");
+            tag.className = "call-tag";
+            tag.textContent = call.direction.toUpperCase();
+
+            li.appendChild(label);
+            li.appendChild(tag);
+            list.appendChild(li);
+        });
     }
 };
 
-
 // =========================
-//   EVENT HANDLERS
+//   APP LIFECYCLE
 // =========================
 
 function startSimulation() {
     const floors = Number(document.getElementById("numFloors").value);
     const lifts = Number(document.getElementById("numLifts").value);
 
-    let err = false;
+    let hasError = false;
 
-    if (floors < 1 || floors > 20) {
-        document.getElementById("floorsError").textContent = "Enter 1–20 floors";
-        err = true;
-    } else document.getElementById("floorsError").textContent = "";
+    if (!floors || floors < 1 || floors > 20) {
+        document.getElementById("floorsError").textContent = "Please enter 1–20 floors";
+        hasError = true;
+    } else {
+        document.getElementById("floorsError").textContent = "";
+    }
 
-    if (lifts < 1 || lifts > 10) {
-        document.getElementById("liftsError").textContent = "Enter 1–10 lifts";
-        err = true;
-    } else document.getElementById("liftsError").textContent = "";
+    if (!lifts || lifts < 1 || lifts > 10) {
+        document.getElementById("liftsError").textContent = "Please enter 1–10 lifts";
+        hasError = true;
+    } else {
+        document.getElementById("liftsError").textContent = "";
+    }
 
-    if (err) return;
+    if (hasError) return;
 
     AppState.numFloors = floors;
     AppState.numLifts = lifts;
@@ -436,8 +479,8 @@ function startSimulation() {
 }
 
 function resetSimulation() {
-    document.getElementById("configScreen").style.display = "block";
     document.getElementById("simulationScreen").style.display = "none";
+    document.getElementById("configScreen").style.display = "block";
 
     document.getElementById("building").innerHTML = "";
     document.getElementById("liftPanels").innerHTML = "";
@@ -448,6 +491,6 @@ function resetSimulation() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("startBtn").onclick = startSimulation;
-    document.getElementById("resetBtn").onclick = resetSimulation;
+    document.getElementById("startBtn").addEventListener("click", startSimulation);
+    document.getElementById("resetBtn").addEventListener("click", resetSimulation);
 });
