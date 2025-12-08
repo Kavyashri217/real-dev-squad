@@ -1,21 +1,21 @@
-// Central App State
+// --- CENTRAL APP STATE ------------------------------------------------------
 
 const AppState = {
     numFloors: 0,
     numLifts: 0,
-    lifts: [], // array of lift objects
-    activeCalls: new Map(), // key: "floor-direction" -> {floor, direction, createdAt}
-    floorHeight: 0 //pixel height of each floor row (computed after render)
+    lifts: [],        // array of lift objects
+    activeCalls: new Map(), // key: "floor-direction" -> { floor, direction, createdAt }
+    floorHeight: 0    // pixel height of each floor row (computed after render)
 };
 
-// Lift factory 
+// Lift factory
 function createLift(id) {
     return {
-        id, 
+        id,
         currentFloor: 0,
         queue: [],
         isMoving: false,
-        direction: "idle", // 'up' / 'down' / 'idle'
+        direction: "idle", // 'up' | 'down' | 'idle'
         processing: false,
         dom: {
             element: null,
@@ -29,17 +29,17 @@ function createLift(id) {
     };
 }
 
-// Lift Controller(Logic)
+// --- LIFT CONTROLLER (LOGIC) -----------------------------------------------
 
 const LiftController = {
-    FLOOR_TRAVEL_TIME: 1500, // per floor time in ms
-    DOOR_TIME: 1800, // doors opening or closing time in ms
+    FLOOR_TRAVEL_TIME: 1500, // per floor ms
+    DOOR_TIME: 1800,         // doors open or close ms
 
     // User clicks call button
     requestPickup(floor, direction) {
         const key = `${floor}-${direction}`;
-        if (AppState.activeCalls.has(key)){
-            return; //already in queue
+        if (AppState.activeCalls.has(key)) {
+            return; // already in queue
         }
 
         const call = { floor, direction, createdAt: Date.now() };
@@ -64,20 +64,20 @@ const LiftController = {
 
         AppState.lifts.forEach((lift, index) => {
             const lastStop = lift.queue.length
-            ? lift.queue[lift.queue.length - 1]
-            : lift.currentFloor;
+                ? lift.queue[lift.queue.length - 1]
+                : lift.currentFloor;
 
             const distance = Math.abs(lastStop - call.floor);
 
             // small penalty for existing queue so busy lifts are less preferred
             const queuePenalty = lift.queue.length * 0.8;
 
-            // favour lifts that are already going in the same direction and in path
+            // favour lifts that are already going in the same direction & in path
             let directionBonus = 0;
             if (lift.direction === call.direction && lift.direction !== "idle") {
                 if (
                     (call.direction === "up" && call.floor >= lift.currentFloor) ||
-                    (call.direction === "down" && call.floor <= lift.currentFloor )
+                    (call.direction === "down" && call.floor <= lift.currentFloor)
                 ) {
                     directionBonus = -1.5;
                 }
@@ -100,10 +100,10 @@ const LiftController = {
         }
 
         // Sort queue in direction of travel or relative to current floor
-        lift.queue.sort((a,b) => a - b);
+        lift.queue.sort((a, b) => a - b);
 
         if (lift.direction === "down") {
-            lift.queue.sort((a,b) => b - a);
+            lift.queue.sort((a, b) => b - a);
         }
 
         UI.updateLiftPanel(lift);
@@ -138,7 +138,7 @@ const LiftController = {
         }
 
         lift.direction = "idle";
-        lift. isMoving = false;
+        lift.isMoving = false;
         lift.processing = false;
         UI.setLiftStatus(lift, "Idle");
         UI.updateLiftPanel(lift);
@@ -183,7 +183,6 @@ const LiftController = {
                 UI.markCallButton(call.floor, call.direction, false);
             }
         }
-
         toDelete.forEach((k) => AppState.activeCalls.delete(k));
         UI.updateCallQueueList();
     },
@@ -193,14 +192,14 @@ const LiftController = {
     }
 };
 
-// UI Layer
+// --- UI LAYER ---------------------------------------------------------------
 
 const UI = {
     initBuilding() {
         const buildingEl = document.getElementById("building");
         buildingEl.innerHTML = "";
 
-        // create floors from 0 upwards but visually reversed with flex-column reverse
+        // create floors from 0 upwards but visually reversed with flex-column-reverse
         for (let floor = 0; floor < AppState.numFloors; floor++) {
             const floorEl = document.createElement("div");
             floorEl.className = "floor";
@@ -221,13 +220,13 @@ const UI = {
                 upBtn.className = "call-button";
                 upBtn.textContent = "▲";
                 upBtn.id = `call-btn-${floor}-up`;
-                upBtn.addEventListener("click", () => 
+                upBtn.addEventListener("click", () =>
                     LiftController.requestPickup(floor, "up")
-            );
-            actions.appendChild(upBtn);
+                );
+                actions.appendChild(upBtn);
             }
 
-            if(floor > 0) {
+            if (floor > 0) {
                 const downBtn = document.createElement("button");
                 downBtn.className = "call-button";
                 downBtn.textContent = "▼";
@@ -276,7 +275,7 @@ const UI = {
             const statusChip = document.createElement("div");
             statusChip.className = "lift-status-chip";
             statusChip.id = `lift-status-${lift.id}`;
-            statusChip.textContext = "Idle";
+            statusChip.textContent = "Idle";
 
             const doors = document.createElement("div");
             doors.className = "lift-doors";
@@ -305,7 +304,7 @@ const UI = {
         const anyFloor = document.querySelector(".floor");
         if (!anyFloor) return;
         const rect = anyFloor.getBoundingClientRect();
-        AppState.floorHeight = rect.height + 4; //include gap
+        AppState.floorHeight = rect.height + 4; // include gap
     },
 
     positionLiftsAtGround() {
@@ -314,7 +313,7 @@ const UI = {
             if (!el) return;
             el.style.transition = "none";
             el.style.bottom = "0px";
-            
+
             // force reflow then enable transition for moves
             void el.offsetHeight;
             el.style.transition = "";
@@ -333,22 +332,22 @@ const UI = {
 
     setDoorState(liftId, open) {
         const liftEl = document.getElementById(`lift-${liftId}`);
-        if(!liftEl) return;
+        if (!liftEl) return;
         if (open) {
             liftEl.classList.add("doors-open");
         } else {
-            liftEl.classList.remove("door-open");
+            liftEl.classList.remove("doors-open");
         }
     },
 
     setLiftStatus(lift, statusText) {
-        if(lift.dom.statusChip) {
+        if (lift.dom.statusChip) {
             lift.dom.statusChip.textContent = statusText;
         }
     },
 
     markCallButton(floor, direction, active) {
-        const btn = document.getElementById(`call-btn-${floor}-${direction}`)
+        const btn = document.getElementById(`call-btn-${floor}-${direction}`);
         if (!btn) return;
         if (active) {
             btn.classList.add("active");
@@ -362,7 +361,7 @@ const UI = {
         if (!list) return;
 
         list.innerHTML = "";
-        if(AppState.activeCalls.size === 0) {
+        if (AppState.activeCalls.size === 0) {
             const li = document.createElement("li");
             li.textContent = "No pending requests";
             list.appendChild(li);
@@ -370,7 +369,7 @@ const UI = {
         }
 
         const sorted = Array.from(AppState.activeCalls.values()).sort(
-            (a,b) => a.createdAt - b.createdAt
+            (a, b) => a.createdAt - b.createdAt
         );
 
         sorted.forEach((call) => {
@@ -387,7 +386,7 @@ const UI = {
     },
 
     initLiftPanels() {
-        const container = document.getElementId("liftPanels");
+        const container = document.getElementById("liftPanels");
         container.innerHTML = "";
 
         AppState.lifts.forEach((lift) => {
@@ -433,7 +432,7 @@ const UI = {
             panel.appendChild(body);
             container.appendChild(panel);
 
-            // connect to lift 
+            // connect to lift
             lift.dom.panel = panel;
             lift.dom.panelDot = dot;
             lift.dom.panelFloor = floorValue;
@@ -463,7 +462,7 @@ const UI = {
         if (lift.dom.panelQueue) {
             lift.dom.panelQueue.textContent = lift.queue.length
                 ? lift.queue.join(", ")
-                : "–"
+                : "–";
         }
 
         if (lift.dom.panelDot) {
@@ -479,9 +478,9 @@ const UI = {
     }
 };
 
-// App LifeCycle
+// --- APP LIFECYCLE ---------------------------------------------------------
 
-function startSimulation(){
+function startSimulation() {
     const floors = parseInt(document.getElementById("numFloors").value, 10);
     const liftsCount = parseInt(document.getElementById("numLifts").value, 10);
 
@@ -546,7 +545,8 @@ function resetSimulation() {
     document.getElementById("configScreen").style.display = "block";
 }
 
-// Event Writing
+// --- EVENT WIRING ----------------------------------------------------------
+
 document.addEventListener("DOMContentLoaded", () => {
     const startBtn = document.getElementById("startBtn");
     const resetBtn = document.getElementById("resetBtn");
