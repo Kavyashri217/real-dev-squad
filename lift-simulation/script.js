@@ -254,14 +254,17 @@ const UI = {
     },
 
     attachLifts() {
-        const firstLiftsArea = document.querySelector(".lifts-area");
-        if (!firstLiftsArea) return;
+        const building = document.getElementById("building");
 
-        // Create a single shaft region that spans vertically, lifts absolutely positioned
+        // Create a full-height shaft overlay
         const shaft = document.createElement("div");
         shaft.className = "lift-shaft";
-
-        firstLiftsArea.appendChild(shaft);
+        shaft.style.position = "absolute";
+        shaft.style.top = "0";
+        shaft.style.bottom = "0";
+        shaft.style.left = "160px";   // adjust to align with lifts-area
+        shaft.style.right = "20px";   // or fixed width if needed
+        building.appendChild(shaft);
 
         AppState.lifts.forEach((lift) => {
             const liftEl = document.createElement("div");
@@ -301,11 +304,17 @@ const UI = {
     },
 
     captureFloorHeight() {
-        const anyFloor = document.querySelector(".floor");
-        if (!anyFloor) return;
-        const rect = anyFloor.getBoundingClientRect();
-        AppState.floorHeight = rect.height + 4; // include gap
+    const floorEl = document.querySelector(".floor");
+    if (!floorEl) return;
+
+    // Use offsetHeight so it includes margins, borders, rendering etc.
+    const height = floorEl.offsetHeight;
+
+    // Store exact height for lift positioning
+    AppState.floorHeight = height;
+    console.log("Computed floor height:", height);
     },
+
 
     positionLiftsAtGround() {
         AppState.lifts.forEach((lift) => {
