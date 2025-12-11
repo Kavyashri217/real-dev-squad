@@ -78,7 +78,7 @@ body {
     /* Beautiful soft pill button, NOT glowing */
     background: #6366f1;              /* flat indigo (nice & modern) */
     color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.10);  /* very soft shadow, NOT glow */
+    box-shadow: none;  /* very soft shadow, NOT glow */
     
     /* softened transitions */
     transition: background 0.12s ease, transform 0.12s ease;
