@@ -73,8 +73,15 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap:6px;
-    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, opacity 0.12s ease;
+    gap: 6px;
+
+    /* REMOVE ALL GLOW + GRADIENT */
+    background: #4f46e5;        /* flat purple */
+    box-shadow: none;           /* no illumination */
+    opacity: 1;
+
+    /* Keep transitions but remove transform jump */
+    transition: background 0.12s ease, opacity 0.12s ease;
 }
 
 .btn-primary {
@@ -85,14 +92,14 @@ body {
 }
 
 .btn-primary:hover {
+    background: #4338ca;
     transform: none;
     box-shadow: none;
-    filter: none;
 }
 
 .btn-primary:active {
-    transform: translateY(0);
-    box-shadow: 0 10px 22px rgba(59,130,246,0.45);
+    transform: none;
+    box-shadow: none;
 }
 
 .btn-ghost {
