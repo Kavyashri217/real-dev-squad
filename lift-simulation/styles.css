@@ -63,25 +63,14 @@ body {
 }
 
 /* Buttons */
+/* FORCE REMOVE ALL ILLUMINATION FROM .btn */
 .btn {
-    border-radius: 999px;
-    padding: 10px 18px;
-    border: none;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-
-    /* REMOVE ALL GLOW + GRADIENT */
-    background: #4f46e5;        /* flat purple */
-    box-shadow: none;           /* no illumination */
-    opacity: 1;
-
-    /* Keep transitions but remove transform jump */
-    transition: background 0.12s ease, opacity 0.12s ease;
+    background: #4f46e5 !important;  /* flat color, no gradient */
+    box-shadow: none !important;      /* remove glow shadow */
+    filter: none !important;          /* remove brightness effects */
+    opacity: 1 !important;            /* ensure no fade look */
+    transform: none !important;       /* no movement illusion */
+    transition: background 0.12s ease !important;
 }
 
 .btn-primary {
