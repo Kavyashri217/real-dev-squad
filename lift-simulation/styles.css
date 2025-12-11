@@ -76,7 +76,7 @@ body {
     gap: 6px;
 
     /* Beautiful soft pill button, NOT glowing */
-    background: #6366f1;              /* flat indigo (nice & modern) */
+    background: #3b82f6;              
     color: white;
     box-shadow: none;  
     
@@ -86,7 +86,7 @@ body {
 
 /* Soft, non-glowing hover */
 .btn:hover {
-    background: #4f46e5;              /* slightly darker */
+    background: #504ca3;              /* slightly darker */
     transform: translateY(-1px);      /* subtle micro-lift */
 }
 
