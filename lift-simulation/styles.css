@@ -85,8 +85,9 @@ body {
 }
 
 .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 40px rgba(59,130,246,0.6);
+    transform: none;
+    box-shadow: none;
+    filter: none;
 }
 
 .btn-primary:active {
