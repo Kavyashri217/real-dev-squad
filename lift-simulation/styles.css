@@ -63,14 +63,37 @@ body {
 }
 
 /* Buttons */
-/* FORCE REMOVE ALL ILLUMINATION FROM .btn */
 .btn {
-    background: #4f46e5 !important;  /* flat color, no gradient */
-    box-shadow: none !important;      /* remove glow shadow */
-    filter: none !important;          /* remove brightness effects */
-    opacity: 1 !important;            /* ensure no fade look */
-    transform: none !important;       /* no movement illusion */
-    transition: background 0.12s ease !important;
+    border-radius: 999px;
+    padding: 10px 18px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    /* Beautiful soft pill button, NOT glowing */
+    background: #6366f1;              /* flat indigo (nice & modern) */
+    color: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.10);  /* very soft shadow, NOT glow */
+    
+    /* softened transitions */
+    transition: background 0.12s ease, transform 0.12s ease;
+}
+
+/* Soft, non-glowing hover */
+.btn:hover {
+    background: #4f46e5;              /* slightly darker */
+    transform: translateY(-1px);      /* subtle micro-lift */
+}
+
+/* Remove glow on active press */
+.btn:active {
+    transform: translateY(0);
+    box-shadow: none;
 }
 
 .btn-primary {
