@@ -346,7 +346,7 @@ body {
 }
 
 .call-button.active {
-    background: #b1b40b; 
+    background: rgba(30,64,175,0.9); 
     color: white;
     box-shadow: none;
     border-color: transparent;
