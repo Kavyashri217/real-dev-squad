@@ -43,13 +43,11 @@ body {
 }
 
 /* Generic Card + Buttons */
-.card{
+.card {
     background: rgba(15, 23, 42, 0.92);
     border-radius: 20px;
-    border: 1px solid rgba(148, 163, 184, 0.25);
-    box-shadow:
-        0 22px 50px rgba(15,23,42,0.8),
-        0 0 0 1px rgba(15,23,42,0.9);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: none;                 /* remove all glow */
     backdrop-filter: blur(20px);
 }
 
