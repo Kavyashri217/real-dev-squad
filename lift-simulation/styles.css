@@ -346,10 +346,10 @@ body {
 }
 
 .call-button.active {
-    background: linear-gradient(135deg, #facc15, #fb923c);
-    color: #111827;
-    border-color: rgba(248,250,252,0.9);
-    box-shadow: 0 10px 26px rgba(251, 191, 36, 0.9);
+    background: #b1b40b; 
+    color: white;
+    box-shadow: none;
+    border-color: transparent;
 }
 
 /* lifts area (columns) */
