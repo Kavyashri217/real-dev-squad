@@ -339,8 +339,8 @@ body {
 }
 
 .call-button:hover {
-    transform: translateY(-1px); 
-    box-shadow: 0 8px 18px rgba(15,23,42,0.75);
+    transform: none; 
+    box-shadow: none;
     background: rgba(30,64,175,0.9);
     border-color: rgba(129,140,248,0.9);
 }
