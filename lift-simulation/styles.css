@@ -389,6 +389,18 @@ body {
     pointer-events: none; /* clicks go to buttons, not shaft */
 }
 
+/* lift layer (holds multiple shafts horizontally) */
+#lift-layer {
+    display: flex;
+    flex-direction: row;
+    gap: 60px;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 160px;
+    pointer-events: none;
+}
+
 /* actual lift car */
 .lift {
     position: absolute;
