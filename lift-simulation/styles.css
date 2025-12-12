@@ -282,7 +282,7 @@ body {
 
     /* 🔥 FIX: allow scrolling */
     overflow-y: auto;
-    overflow-x: hidden;
+    overflow-x: auto;
 
     border-radius: 16px;
     border: 1px solid rgba(107,114,128,0.6);
