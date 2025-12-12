@@ -254,54 +254,81 @@ const UI = {
     },
 
     attachLifts() {
-        const building = document.getElementById("building");
+    const building = document.getElementById("building");
 
-        // Create a full-height shaft overlay
+    // If an old layer exists, remove it so lifts do not duplicate
+    const oldLayer = document.getElementById("lift-layer");
+    if (oldLayer) oldLayer.remove();
+
+    // Create a new lift layer that will hold multiple shafts
+    const layer = document.createElement("div");
+    layer.id = "lift-layer";
+    layer.style.position = "absolute";
+    layer.style.top = "0";
+    layer.style.bottom = "0";
+    layer.style.left = "160px";    // aligns with lift area
+    layer.style.display = "flex";
+    layer.style.gap = "60px";      // space between lifts
+    layer.style.pointerEvents = "none";
+
+    building.appendChild(layer);
+
+    // Create one shaft per lift
+    AppState.lifts.forEach(lift => {
         const shaft = document.createElement("div");
         shaft.className = "lift-shaft";
-        shaft.style.position = "absolute";
-        shaft.style.top = "0";
-        shaft.style.bottom = "0";
-        shaft.style.left = "160px";   // adjust to align with lifts-area
-        shaft.style.right = "20px";   // or fixed width if needed
-        building.appendChild(shaft);
+        shaft.style.position = "relative";
+        shaft.style.width = "90px";
+        shaft.style.height = "100%";
+        shaft.style.pointerEvents = "none";
 
-        AppState.lifts.forEach((lift) => {
-            const liftEl = document.createElement("div");
-            liftEl.className = "lift";
-            liftEl.id = `lift-${lift.id}`;
+        const liftEl = document.createElement("div");
+        liftEl.className = "lift";
+        liftEl.id = `lift-${lift.id}`;
+        liftEl.style.position = "absolute";
+        liftEl.style.bottom = "0px";
+        liftEl.style.left = "50%";
+        liftEl.style.transform = "translateX(-50%)";
 
-            const badge = document.createElement("div");
-            badge.className = "lift-badge";
-            badge.textContent = `L${lift.id + 1}`;
+        // Badge
+        const badge = document.createElement("div");
+        badge.className = "lift-badge";
+        badge.textContent = `L${lift.id + 1}`;
 
-            const statusChip = document.createElement("div");
-            statusChip.className = "lift-status-chip";
-            statusChip.id = `lift-status-${lift.id}`;
-            statusChip.textContent = "Idle";
+        // Status chip
+        const statusChip = document.createElement("div");
+        statusChip.className = "lift-status-chip";
+        statusChip.id = `lift-status-${lift.id}`;
+        statusChip.textContent = "Idle";
 
-            const doors = document.createElement("div");
-            doors.className = "lift-doors";
+        // Doors
+        const doors = document.createElement("div");
+        doors.className = "lift-doors";
 
-            const leftDoor = document.createElement("div");
-            leftDoor.className = "lift-door left";
-            const rightDoor = document.createElement("div");
-            rightDoor.className = "lift-door right";
+        const leftDoor = document.createElement("div");
+        leftDoor.className = "lift-door left";
 
-            doors.appendChild(leftDoor);
-            doors.appendChild(rightDoor);
+        const rightDoor = document.createElement("div");
+        rightDoor.className = "lift-door right";
 
-            liftEl.appendChild(doors);
-            liftEl.appendChild(badge);
-            liftEl.appendChild(statusChip);
+        doors.appendChild(leftDoor);
+        doors.appendChild(rightDoor);
 
-            shaft.appendChild(liftEl);
+        liftEl.appendChild(doors);
+        liftEl.appendChild(badge);
+        liftEl.appendChild(statusChip);
 
-            // store DOM refs
-            lift.dom.element = liftEl;
-            lift.dom.statusChip = statusChip;
-        });
-    },
+        // Save references
+        lift.dom.element = liftEl;
+        lift.dom.statusChip = statusChip;
+
+        // Put the lift inside THIS shaft
+        shaft.appendChild(liftEl);
+
+        // Add the shaft to the lift layer
+        layer.appendChild(shaft);
+    });
+},          
 
     captureFloorHeight() {
     const floorEl = document.querySelector(".floor");
