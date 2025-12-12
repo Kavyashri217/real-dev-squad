@@ -535,20 +535,22 @@ function startSimulation() {
 
     let hasError = false;
 
-    if (Number.isNaN(floors) || floors < 1 || floors > 20) {
-        document.getElementById("floorsError").textContent =
-            "Please enter 1–20 floors";
-        hasError = true;
+    /* Floors validation — remove upper limit */
+    if (Number.isNaN(floors) || floors < 1) {
+    document.getElementById("floorsError").textContent =
+        "Must have at least 1 floor";
+    hasError = true;
     } else {
-        document.getElementById("floorsError").textContent = "";
+    document.getElementById("floorsError").textContent = "";
     }
 
-    if (Number.isNaN(liftsCount) || liftsCount < 1 || liftsCount > 10) {
-        document.getElementById("liftsError").textContent =
-            "Please enter 1–10 lifts";
-        hasError = true;
+    /* Lifts validation — remove upper limit */
+    if (Number.isNaN(liftsCount) || liftsCount < 1) {
+    document.getElementById("liftsError").textContent =
+        "Must have at least 1 lift";
+    hasError = true;
     } else {
-        document.getElementById("liftsError").textContent = "";
+    document.getElementById("liftsError").textContent = "";
     }
 
     if (hasError) return;
