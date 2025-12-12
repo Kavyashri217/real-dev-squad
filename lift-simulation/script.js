@@ -142,6 +142,10 @@ const LiftController = {
         lift.processing = false;
         UI.setLiftStatus(lift, "Idle");
         UI.updateLiftPanel(lift);
+
+        if (lift.queue.length > 0) {
+            this.processLiftQueue(lift);
+        }
     },
 
     async moveLift(lift, targetFloor) {
