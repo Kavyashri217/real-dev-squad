@@ -360,15 +360,24 @@ const UI = {
         });
     },
 
+    
     animateLift(liftId, targetFloor, duration) {
-        const liftEl = document.getElementById(`lift-${liftId}`);
-        if (!liftEl) return;
-        const h = AppState.floorHeight || 60;
-        const position = targetFloor * h;
+    const liftEl = document.getElementById(`lift-${liftId}`);
+    const floorEl = document.querySelector(`.floor[data-floor="${targetFloor}"]`);
+    const buildingEl = document.getElementById("building");
 
-        liftEl.style.transition = `bottom ${duration}ms linear`;
-        liftEl.style.bottom = `${position}px`;
+    if (!liftEl || !floorEl || !buildingEl) return;
+
+    const buildingRect = buildingEl.getBoundingClientRect();
+    const floorRect = floorEl.getBoundingClientRect();
+
+    // Distance from building bottom to floor bottom
+    const bottomOffset = buildingRect.bottom - floorRect.bottom;
+
+    liftEl.style.transition = `bottom ${duration}ms linear`;
+    liftEl.style.bottom = `${bottomOffset}px`;
     },
+
 
     setDoorState(liftId, open) {
         const liftEl = document.getElementById(`lift-${liftId}`);
