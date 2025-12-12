@@ -279,14 +279,21 @@ body {
     position: relative;
     height: 520px;
     max-height: 70vh;
-    overflow: hidden;
+
+    /* 🔥 FIX: allow scrolling */
+    overflow-y: auto;
+    overflow-x: hidden;
+
     border-radius: 16px;
     border: 1px solid rgba(107,114,128,0.6);
     background: radial-gradient(circle at top, #020617, #020617 45%, #020617 100%); 
     padding: 8px 12px; 
     display: flex;
-    flex-direction: column-reverse; /* ground floor visually at bottom */
+    flex-direction: column-reverse; 
     gap: 4px;
+
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
 }
 
 /* individual floor row */
